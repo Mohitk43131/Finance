@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Ledger - eSports Dashboard</title>
+    <style>
+        :root {
+            --bg-color: #f4f7fa; --card-bg: #ffffff; --text-color: #333333;
+            --sidebar-bg: #1a1c23; --sidebar-text: #a0aec0; --accent: #4318FF;
+            --success: #01B574; --danger: #EE5D50; --border-color: #e2e8f0;
+        }
+        [data-theme="dark"] {
+            --bg-color: #0b1437; --card-bg: #111c44; --text-color: #ffffff;
+            --sidebar-bg: #0b1437; --sidebar-text: #a0aec0; --border-color: rgba(255,255,255,0.1);
+        }
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { margin: 0; background: var(--bg-color); color: var(--text-color); display: flex; transition: 0.3s; height: 100vh; overflow: hidden;}
+        
+        /* Sidebar */
+        .sidebar { width: 250px; height: 100vh; background: var(--sidebar-bg); padding: 20px; border-right: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column;}
+        .sidebar h2 { color: white; margin-bottom: 30px;}
+        .nav-link { display: block; padding: 12px; color: var(--sidebar-text); text-decoration: none; margin-bottom: 10px; border-radius: 8px;}
+        .nav-link:hover, .nav-link.active { background: var(--accent); color: white; }
+
+        /* Main Content */
+        .main-content { flex: 1; padding: 30px; height: 100vh; overflow-y: auto;}
+        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px;}
+        .theme-btn { padding: 8px 16px; font-weight: bold; background: var(--accent); color: white; border: none; border-radius: 8px; cursor: pointer; }
+
+        /* Form Container */
+        .form-container { background: var(--card-bg); padding: 20px 30px; border-radius: 15px; margin-bottom: 30px; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05);}
+        .form-container h2 { margin-top: 0; font-size: 18px; margin-bottom: 20px; }
+        .form-row { display: flex; gap: 20px; margin-bottom: 15px; flex-wrap: wrap; }
+        .form-group { flex: 1; display: flex; flex-direction: column; min-width: 150px; }
+        .form-group label { font-size: 12px; color: var(--sidebar-text); margin-bottom: 5px; text-transform: uppercase;}
+        .form-group input, .form-group select { padding: 10px; border-radius: 8px; border: 1px solid rgba(160, 174, 192, 0.3); background: var(--bg-color); color: var(--text-color);}
+        .submit-btn { padding: 12px; font-weight: bold; background: var(--accent); color: white; border: none; border-radius: 8px; cursor: pointer; width: 100%;}
+        
+        /* Ledger Table */
+        .table-container { background: var(--card-bg); padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow-x: auto;}
+        .table-container h3 { margin-top: 0; margin-bottom: 20px; font-size: 18px;}
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { padding: 12px 15px; border-bottom: 2px solid var(--border-color); color: var(--sidebar-text); font-size: 12px; text-transform: uppercase; }
+        td { padding: 12px 15px; border-bottom: 1px solid var(--border-color); font-size: 14px; }
+        tr:hover { background-color: rgba(67, 24, 255, 0.05); }
+        
+        .type-badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .badge-income { background: rgba(1, 181, 116, 0.1); color: var(--success); }
+        .badge-expense { background: rgba(238, 93, 80, 0.1); color: var(--danger); }
+        
+        .text-success { color: var(--success); font-weight: bold;}
+        .text-danger { color: var(--danger); font-weight: bold;}
+        
+        /* Delete Button Styling */
+        .delete-btn {
+            background: transparent; color: var(--danger); border: 1px solid var(--danger);
+            border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-weight: bold;
+            transition: 0.2s;
+        }
+        .delete-btn:hover { background: var(--danger); color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div>
+            <h2>🎮 eSports UI</h2>
+            <a href="index.html" class="nav-link">Overview</a>
+            <a href="dashboard.html" class="nav-link">Performance Stats</a>
+            <a href="finance.html" class="nav-link active">Finance Ledger</a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <div>
+                <h1 style="margin-top: 0; margin-bottom: 5px;">Finance Ledger</h1>
+                <p style="margin: 0; color: var(--sidebar-text); font-size: 14px;">Manage and view all transactions</p>
+            </div>
+            <div style="display: flex; align-items: center;">
+                <span id="userInfo" style="margin-right: 15px; font-size: 14px; color: var(--sidebar-text);"></span>
+                <button id="themeToggleBtn" class="theme-btn">Toggle Theme</button>
+            </div>
+        </div>
+
+        <div class="form-container" id="adminForm">
+            <h2>Record New Transaction</h2>
+            <form id="financeForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Title</label>
+                        <input type="text" id="title" placeholder="e.g. Prize Pool, Venue Cost" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select id="type" required>
+                            <option value="INCOME">Gain (Income)</option>
+                            <option value="EXPENSE">Loss (Expense)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount (₹)</label>
+                        <input type="number" id="amount" step="0.01" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" id="transactionDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Time</label>
+                        <input type="time" id="transactionTime" required>
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: flex-end;">
+                        <button type="submit" class="submit-btn">+ Add Record</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="table-container">
+            <h3>Transaction History</h3>
+            <table id="ledgerTable">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Title</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Action</th> </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="5" style="text-align: center;">Loading data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        // ✨ IMPORTED 'remove' SO WE CAN DELETE DATA
+        import { getDatabase, ref, push, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA45woJ-QeDGpk7KkS_jkSaXuBTnqkzcQ8",
+            authDomain: "next-streaming-645b2.firebaseapp.com",
+            databaseURL: "https://next-streaming-645b2-default-rtdb.firebaseio.com",
+            projectId: "next-streaming-645b2",
+            storageBucket: "next-streaming-645b2.firebasestorage.app",
+            messagingSenderId: "353530200083",
+            appId: "1:353530200083:web:f82a1534b65ac4bbe5ffe6"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        const ADMIN_EMAILS = ["suryax06@gmail.com", "mohitk43131@gmail.com"]; 
+        const formatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
+
+        // Global state variables
+        let allTransactions = [];
+        let currentUserIsAdmin = false;
+
+        document.getElementById('themeToggleBtn').addEventListener('click', () => {
+            const html = document.documentElement;
+            html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+        });
+
+        function setDateTimeDefaults() {
+            document.getElementById('transactionDate').valueAsDate = new Date();
+            document.getElementById('transactionTime').value = new Date().toTimeString().slice(0,5);
+        }
+        setDateTimeDefaults();
+
+        // Auth Listener
+        onAuthStateChanged(auth, (user) => {
+            if (user && ADMIN_EMAILS.includes(user.email)) {
+                currentUserIsAdmin = true;
+                document.getElementById('adminForm').style.display = 'block'; 
+                document.getElementById('userInfo').innerHTML = `${user.email.split('@')[0]} <span style="background: var(--accent); color: white; padding: 3px 8px; border-radius: 4px; font-size: 11px; margin-left: 5px;">ADMIN</span>`;
+            } else if (user) {
+                currentUserIsAdmin = false;
+                document.getElementById('adminForm').style.display = 'none'; 
+                document.getElementById('userInfo').innerHTML = `${user.email.split('@')[0]} (Viewer)`;
+            } else {
+                currentUserIsAdmin = false;
+                document.getElementById('adminForm').style.display = 'none'; 
+                document.getElementById('userInfo').innerHTML = `Guest Viewer`;
+            }
+            renderTable(); // Re-draw table to show/hide delete buttons
+        });
+
+        // Fetch Data from Firebase
+        const financesRef = ref(db, 'finances');
+        onValue(financesRef, (snapshot) => {
+            const data = snapshot.val();
+            allTransactions = [];
+            
+            if (data) {
+                allTransactions = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+                allTransactions.sort((a, b) => new Date(b.transactionDate + 'T' + b.transactionTime) - new Date(a.transactionDate + 'T' + a.transactionTime));
+            }
+            renderTable(); // Re-draw table with new data
+        });
+
+        // Function to draw the table and insert Delete buttons securely
+        function renderTable() {
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = ''; 
+            
+            if (allTransactions.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No transactions found.</td></tr>';
+                return;
+            }
+
+            allTransactions.forEach(t => {
+                const tr = document.createElement('tr');
+                
+                const dateObj = new Date(t.transactionDate + 'T' + t.transactionTime);
+                const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const timeStr = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+                const isIncome = t.type === 'INCOME';
+                const typeBadgeClass = isIncome ? 'badge-income' : 'badge-expense';
+                const typeText = isIncome ? 'Gain' : 'Loss';
+                const amountClass = isIncome ? 'text-success' : 'text-danger';
+                const amountPrefix = isIncome ? '+' : '-';
+
+                // Only generate the delete button HTML if the user is an admin
+                const actionCellHTML = currentUserIsAdmin 
+                    ? `<td><button class="delete-btn" data-id="${t.id}">Delete</button></td>` 
+                    : `<td></td>`;
+
+                tr.innerHTML = `
+                    <td>${dateStr} <br> <span style="color: var(--sidebar-text); font-size: 11px;">${timeStr}</span></td>
+                    <td><strong>${t.title}</strong></td>
+                    <td><span class="type-badge ${typeBadgeClass}">${typeText}</span></td>
+                    <td class="${amountClass}">${amountPrefix} ${formatter.format(t.amount)}</td>
+                    ${actionCellHTML}
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        // --- ADDED: Delete Button Click Listener ---
+        // Using Event Delegation to catch clicks on any 'delete-btn' inside the table
+        document.getElementById('tableBody').addEventListener('click', function(e) {
+            if (e.target.classList.contains('delete-btn')) {
+                const transactionId = e.target.getAttribute('data-id');
+                
+                if (confirm("Are you sure you want to permanently delete this transaction?")) {
+                    const transactionRef = ref(db, 'finances/' + transactionId);
+                    remove(transactionRef)
+                        .then(() => console.log("Transaction deleted successfully."))
+                        .catch((error) => alert("Error deleting data: " + error.message));
+                }
+            }
+        });
+
+        // Form Submission Logic
+        document.getElementById('financeForm').addEventListener('submit', function(e) {
+            e.preventDefault(); 
+            
+            const newTransactionRef = push(ref(db, 'finances'));
+            const transactionData = {
+                title: document.getElementById('title').value,
+                type: document.getElementById('type').value,
+                amount: parseFloat(document.getElementById('amount').value),
+                transactionDate: document.getElementById('transactionDate').value,
+                transactionTime: document.getElementById('transactionTime').value
+            };
+
+            set(newTransactionRef, transactionData).then(() => {
+                document.getElementById('financeForm').reset();
+                setDateTimeDefaults();
+            }).catch((error) => {
+                alert("Error saving data: " + error.message);
+            });
+        });
+    </script>
+</body>
+</html>
