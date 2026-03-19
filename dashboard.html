@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Performance Analytics — eSports Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #000000; --surface: #1c1c1e; --surface2: #2c2c2e; --surface3: #3a3a3c;
+            --border: rgba(255,255,255,0.09); --border-strong: rgba(255,255,255,0.16);
+            --text: #f5f5f7; --muted: #8e8e93;
+            --accent: #0a84ff; --success: #30d158; --danger: #ff453a;
+            --warn: #ff9f0a; --purple: #bf5af2;
+        }
+        [data-theme="light"] {
+            --bg: #f2f2f7; --surface: #ffffff; --surface2: #f2f2f7; --surface3: #e5e5ea;
+            --border: rgba(60,60,67,0.1); --border-strong: rgba(60,60,67,0.2);
+            --text: #000000; --muted: #6c6c70;
+            --accent: #007aff; --success: #34c759; --danger: #ff3b30;
+            --warn: #ff9500; --purple: #af52de;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; transition: background 0.3s, color 0.3s; -webkit-font-smoothing: antialiased; }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar { width: 220px; height: 100vh; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px 12px; flex-shrink: 0; z-index: 10; }
+        .sidebar-logo { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -0.2px; padding: 0 8px; margin-bottom: 3px; }
+        .sidebar-tagline { font-size: 11px; color: var(--muted); padding: 0 8px; margin-bottom: 26px; }
+        .nav-section { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; padding: 0 8px; margin-bottom: 5px; margin-top: 14px; font-weight: 600; }
+        .nav-link { display: flex; align-items: center; gap: 10px; padding: 8px 10px; color: var(--muted); border-radius: 8px; cursor: pointer; margin-bottom: 2px; font-size: 13px; font-weight: 500; transition: all 0.15s; text-decoration: none; }
+        .nav-icon { font-size: 15px; width: 18px; text-align: center; }
+        .nav-link:hover { background: var(--surface2); color: var(--text); }
+        .nav-link.active { background: rgba(10,132,255,0.14); color: var(--accent); font-weight: 600; }
+        [data-theme="light"] .nav-link.active { background: rgba(0,122,255,0.1); }
+        .sidebar-footer { margin-top: auto; padding: 10px 8px; font-size: 11px; color: var(--muted); }
+        .live-dot { display: inline-block; width: 6px; height: 6px; background: var(--success); border-radius: 50%; margin-right: 5px; animation: pulse 2.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        /* ===== MAIN ===== */
+        .main-content { flex: 1; padding: 28px 32px; height: 100vh; overflow-y: auto; }
+        .main-content::-webkit-scrollbar { width: 4px; }
+        .main-content::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+
+        /* ===== HEADER ===== */
+        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
+        .page-title { font-size: 22px; font-weight: 700; color: var(--text); letter-spacing: -0.5px; }
+        .page-subtitle { color: var(--muted); font-size: 12px; margin-top: 3px; }
+        .icon-btn { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+        .icon-btn:hover { background: var(--surface2); border-color: var(--border-strong); }
+
+        /* ===== METRIC CARDS ===== */
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 18px; }
+        .metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; position: relative; overflow: hidden; transition: transform 0.15s; }
+        .metric-card:hover { transform: translateY(-2px); }
+
+        /* Subtle top accent strips */
+        .mc-blue::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent); opacity: 0.45; border-radius: 14px 14px 0 0; }
+        .mc-green::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--success); opacity: 0.45; border-radius: 14px 14px 0 0; }
+        .mc-red::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--danger); opacity: 0.45; border-radius: 14px 14px 0 0; }
+        .mc-warn::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--warn); opacity: 0.45; border-radius: 14px 14px 0 0; }
+        .mc-purple::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--purple); opacity: 0.45; border-radius: 14px 14px 0 0; }
+        .mc-special::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent); opacity: 0.45; border-radius: 14px 14px 0 0; }
+
+        .metric-icon { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-bottom: 12px; }
+        .mi-blue { background: rgba(10,132,255,0.12); }
+        .mi-green { background: rgba(48,209,88,0.12); }
+        .mi-red { background: rgba(255,69,58,0.12); }
+        .mi-warn { background: rgba(255,159,10,0.12); }
+        .mi-purple { background: rgba(191,90,242,0.12); }
+
+        .metric-label { font-size: 10px; color: var(--muted); letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 4px; font-weight: 600; }
+        .metric-value { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
+        .metric-formula { font-size: 10px; color: var(--muted); margin-top: 6px; }
+        .status-pill { position: absolute; top: 18px; right: 18px; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; letter-spacing: 0.3px; }
+        .pill-good { background: rgba(48,209,88,0.12); color: var(--success); }
+        .pill-bad  { background: rgba(255,69,58,0.12); color: var(--danger);  }
+        .pill-neutral { background: var(--surface2); color: var(--muted); }
+
+        /* ===== CHARTS ===== */
+        .charts-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+        .charts-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+        .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+        .chart-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+        .chart-subtitle { font-size: 11px; color: var(--muted); margin-bottom: 16px; }
+
+        /* ===== GAUGE ===== */
+        .gauge-wrap { position: relative; display: flex; flex-direction: column; align-items: center; }
+        .gauge-label { font-size: 11px; color: var(--muted); margin-top: 6px; }
+        .gauge-val { font-size: 20px; font-weight: 700; position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%); letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
+
+        /* ===== PROGRESS BARS ===== */
+        .progress-item { margin-bottom: 14px; }
+        .progress-item:last-child { margin-bottom: 0; }
+        .progress-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; font-weight: 500; }
+        .progress-bar-bg { height: 5px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; border-radius: 3px; transition: width 1.2s cubic-bezier(0.4,0,0.2,1); }
+
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .metric-card, .chart-card { animation: fadeUp 0.35s ease both; }
+        .metric-card:nth-child(2) { animation-delay: 0.04s; }
+        .metric-card:nth-child(3) { animation-delay: 0.08s; }
+        .metric-card:nth-child(4) { animation-delay: 0.12s; }
+        .metric-card:nth-child(5) { animation-delay: 0.16s; }
+        .metric-card:nth-child(6) { animation-delay: 0.20s; }
+    </style>
+</head>
+<body>
+
+<!-- ===== SIDEBAR ===== -->
+<div class="sidebar">
+    <div>
+        <div class="sidebar-logo">⚡ ESPORTS</div>
+        <div class="sidebar-tagline">Analytics Platform</div>
+        <div class="nav-section">Main</div>
+        <a href="index.html" class="nav-link"><span class="nav-icon">◈</span> Overview</a>
+        <a href="dashboard.html" class="nav-link active"><span class="nav-icon">▦</span> Performance</a>
+        <a href="finance.html" class="nav-link"><span class="nav-icon">◎</span> Finance Ledger</a>
+    </div>
+    <div class="sidebar-footer">
+        <span class="live-dot"></span>Live Data Feed<br>
+        <span style="color:var(--success);font-size:10px;">● Firebase Connected</span>
+    </div>
+</div>
+
+<!-- ===== MAIN ===== -->
+<div class="main-content">
+    <div class="header">
+        <div>
+            <div class="page-title">Performance & Risk Analytics</div>
+            <div class="page-subtitle">Real-time system evaluation — all-time data</div>
+        </div>
+        <button id="themeToggleBtn" class="icon-btn">☀ Theme</button>
+    </div>
+
+    <!-- METRIC CARDS -->
+    <div class="card-grid">
+        <div class="metric-card mc-blue">
+            <div class="metric-icon mi-blue">🎮</div>
+            <div class="metric-label">Total Matches</div>
+            <div class="metric-value" id="totalMatches" style="color:var(--accent)">0</div>
+            <div class="metric-formula">Wins + Losses combined</div>
+        </div>
+        <div class="metric-card mc-green">
+            <div class="metric-icon mi-green">🏆</div>
+            <div class="metric-label">Win Rate</div>
+            <div class="metric-value" id="winRate">0%</div>
+            <div class="metric-formula">(Wins ÷ Total) × 100</div>
+        </div>
+        <div class="metric-card mc-green">
+            <div class="metric-icon mi-green">💰</div>
+            <div class="metric-label">Avg Win Amount</div>
+            <div class="metric-value" id="avgWin" style="color:var(--success)">₹0</div>
+            <div class="metric-formula">Total Income ÷ Wins</div>
+        </div>
+        <div class="metric-card mc-red">
+            <div class="metric-icon mi-red">📉</div>
+            <div class="metric-label">Avg Loss Amount</div>
+            <div class="metric-value" id="avgLoss" style="color:var(--danger)">₹0</div>
+            <div class="metric-formula">Total Expense ÷ Losses</div>
+        </div>
+        <div class="metric-card mc-warn">
+            <div class="metric-icon mi-warn">⚖️</div>
+            <div class="metric-label">Risk–Reward Ratio</div>
+            <div class="metric-value" id="riskReward" style="color:var(--warn)">0.00</div>
+            <div class="metric-formula">Avg Win ÷ Avg Loss</div>
+        </div>
+        <div class="metric-card mc-special">
+            <div id="systemStatus" class="status-pill pill-neutral">No Data</div>
+            <div class="metric-icon mi-purple">📊</div>
+            <div class="metric-label">Profit Factor</div>
+            <div class="metric-value" id="profitFactor" style="color:var(--purple)">0.00</div>
+            <div class="metric-formula">Total Income ÷ Total Expense</div>
+        </div>
+    </div>
+
+    <!-- ROW 1: WIN RATE GAUGE + WIN/LOSS BAR + PROFIT FACTOR -->
+    <div class="charts-3col">
+        <div class="chart-card">
+            <div class="chart-title">Win Rate Gauge</div>
+            <div class="chart-subtitle">Visual performance indicator</div>
+            <div class="gauge-wrap">
+                <canvas id="gaugeChart" style="max-height:180px;"></canvas>
+                <div class="gauge-val" id="gaugeLabel" style="color:var(--accent)">0%</div>
+                <div class="gauge-label">Win Rate</div>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title">Win vs Loss Count</div>
+            <div class="chart-subtitle">Transaction frequency split</div>
+            <canvas id="winLossBar" style="max-height:200px;"></canvas>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title">Profit Factor Scale</div>
+            <div class="chart-subtitle">System strength indicator</div>
+            <canvas id="pfChart" style="max-height:200px;"></canvas>
+        </div>
+    </div>
+
+    <!-- ROW 2: AMOUNT COMPARISON + KEY METRICS BREAKDOWN -->
+    <div class="charts-2col">
+        <div class="chart-card">
+            <div class="chart-title">Income vs Expense — Totals</div>
+            <div class="chart-subtitle">Absolute monetary comparison</div>
+            <canvas id="amountBar" style="max-height:230px;"></canvas>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title">Key Metrics Breakdown</div>
+            <div class="chart-subtitle">Normalised performance bars</div>
+            <div id="progressBars" style="margin-top:8px;"></div>
+        </div>
+    </div>
+
+    <!-- ROW 3: CUMULATIVE BALANCE TIMELINE -->
+    <div style="margin-bottom:24px;">
+        <div class="chart-card">
+            <div class="chart-title">Cumulative Balance Timeline</div>
+            <div class="chart-subtitle">Net profit / loss over every transaction</div>
+            <canvas id="timelineChart" style="max-height:220px;"></canvas>
+        </div>
+    </div>
+
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyA45woJ-QeDGpk7KkS_jkSaXuBTnqkzcQ8",
+        authDomain: "next-streaming-645b2.firebaseapp.com",
+        databaseURL: "https://next-streaming-645b2-default-rtdb.firebaseio.com",
+        projectId: "next-streaming-645b2",
+        storageBucket: "next-streaming-645b2.firebasestorage.app",
+        messagingSenderId: "353530200083",
+        appId: "1:353530200083:web:f82a1534b65ac4bbe5ffe6"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const formatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+
+    let gaugeInst, winLossInst, pfInst, amountInst, timelineInst;
+
+    document.getElementById('themeToggleBtn').addEventListener('click', () => {
+        const html = document.documentElement;
+        html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+        setTimeout(renderAll, 60);
+    });
+
+    let savedData = null;
+
+    onValue(ref(db, 'finances'), snapshot => {
+        savedData = snapshot.val();
+        renderAll();
+    });
+
+    function renderAll() {
+        const data = savedData;
+        const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+        const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+        const labelColor = isDark ? '#8e8e93' : '#6c6c70';
+        const accentColor = isDark ? '#0a84ff' : '#007aff';
+        const successColor = isDark ? '#30d158' : '#34c759';
+        const dangerColor = isDark ? '#ff453a' : '#ff3b30';
+        const warnColor = isDark ? '#ff9f0a' : '#ff9500';
+        const purpleColor = isDark ? '#bf5af2' : '#af52de';
+        const tooltipBg = isDark ? 'rgba(28,28,30,0.97)' : 'rgba(255,255,255,0.97)';
+        const tooltipBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+        const tooltipBody = isDark ? '#f5f5f7' : '#1d1d1f';
+        const tooltipCfg = { backgroundColor: tooltipBg, borderColor: tooltipBorder, borderWidth: 1, bodyColor: tooltipBody, padding: 10 };
+
+        let winsCount = 0, lossesCount = 0, totalWinAmt = 0, totalLossAmt = 0;
+        let chronoTx = [];
+
+        if (data) {
+            Object.entries(data).forEach(([k, t]) => {
+                const amt = parseFloat(t.amount);
+                if (t.type === 'INCOME') { winsCount++; totalWinAmt += amt; }
+                else { lossesCount++; totalLossAmt += amt; }
+                chronoTx.push({ ...t, id: k, amt });
+            });
+        }
+        chronoTx.sort((a,b) => new Date(a.transactionDate+'T'+a.transactionTime) - new Date(b.transactionDate+'T'+b.transactionTime));
+
+        const totalMatches = winsCount + lossesCount;
+        const winRate = totalMatches > 0 ? (winsCount / totalMatches) * 100 : 0;
+        const avgWin = winsCount > 0 ? totalWinAmt / winsCount : 0;
+        const avgLoss = lossesCount > 0 ? totalLossAmt / lossesCount : 0;
+        const rrRatio = avgLoss > 0 ? avgWin / avgLoss : (avgWin > 0 ? avgWin : 0);
+        const pf = totalLossAmt > 0 ? totalWinAmt / totalLossAmt : (totalWinAmt > 0 ? totalWinAmt : 0);
+
+        document.getElementById('totalMatches').innerText = totalMatches;
+        const wrEl = document.getElementById('winRate');
+        wrEl.innerText = winRate.toFixed(1) + '%';
+        wrEl.style.color = winRate >= 50 ? successColor : dangerColor;
+        document.getElementById('avgWin').innerText = formatter.format(avgWin);
+        document.getElementById('avgLoss').innerText = formatter.format(avgLoss);
+        document.getElementById('riskReward').innerText = rrRatio.toFixed(2) + 'x';
+
+        const pfEl = document.getElementById('profitFactor');
+        pfEl.innerText = pf.toFixed(2) + 'x';
+        pfEl.style.color = pf >= 1 ? successColor : dangerColor;
+
+        const statusEl = document.getElementById('systemStatus');
+        if (totalMatches === 0) { statusEl.className = 'status-pill pill-neutral'; statusEl.innerText = 'No Data'; }
+        else if (pf >= 1.5) { statusEl.className = 'status-pill pill-good'; statusEl.innerText = 'Strong'; }
+        else if (pf >= 1)   { statusEl.className = 'status-pill pill-good'; statusEl.innerText = 'Profitable'; }
+        else                { statusEl.className = 'status-pill pill-bad'; statusEl.innerText = 'At Loss'; }
+
+        document.getElementById('gaugeLabel').innerText = winRate.toFixed(1) + '%';
+        document.getElementById('gaugeLabel').style.color = winRate >= 50 ? successColor : dangerColor;
+
+        // 1. Gauge
+        if (gaugeInst) gaugeInst.destroy();
+        gaugeInst = new Chart(document.getElementById('gaugeChart'), {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [winRate, 100 - winRate],
+                    backgroundColor: [winRate >= 50 ? successColor + 'cc' : dangerColor + 'cc', 'rgba(128,128,128,0.1)'],
+                    borderColor: [winRate >= 50 ? successColor : dangerColor, 'transparent'],
+                    borderWidth: [1.5, 0]
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                circumference: 180, rotation: -90,
+                cutout: '74%',
+                plugins: { legend: { display: false }, tooltip: { ...tooltipCfg } }
+            }
+        });
+
+        // 2. Win/Loss bar
+        if (winLossInst) winLossInst.destroy();
+        winLossInst = new Chart(document.getElementById('winLossBar'), {
+            type: 'bar',
+            data: {
+                labels: ['Wins', 'Losses'],
+                datasets: [{
+                    data: [winsCount, lossesCount],
+                    backgroundColor: [successColor + '80', dangerColor + '80'],
+                    borderColor: [successColor, dangerColor],
+                    borderWidth: 1.5, borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { ...tooltipCfg } },
+                scales: { x: { grid: { color: gridColor }, ticks: { color: labelColor, font: { size: 11 } } }, y: { grid: { color: gridColor }, ticks: { color: labelColor, stepSize: 1, font: { size: 11 } } } }
+            }
+        });
+
+        // 3. Profit Factor
+        if (pfInst) pfInst.destroy();
+        const pfCap = Math.min(pf, 10);
+        pfInst = new Chart(document.getElementById('pfChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Profit Factor'],
+                datasets: [
+                    { label: 'Your PF', data: [pfCap], backgroundColor: pf > 1 ? successColor + '80' : dangerColor + '80', borderColor: pf > 1 ? successColor : dangerColor, borderWidth: 1.5, borderRadius: 5 },
+                    { label: 'Break-even (1.0)', data: [1], backgroundColor: warnColor + '4d', borderColor: warnColor, borderWidth: 1.5, borderRadius: 5 }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: labelColor, usePointStyle: true, font: { size: 11 } } }, tooltip: { ...tooltipCfg } },
+                scales: { x: { grid: { color: gridColor }, ticks: { color: labelColor, font: { size: 11 } }, max: Math.max(10, pfCap + 1) }, y: { grid: { display: false }, ticks: { color: labelColor, font: { size: 11 } } } }
+            }
+        });
+
+        // 4. Amount comparison
+        if (amountInst) amountInst.destroy();
+        amountInst = new Chart(document.getElementById('amountBar'), {
+            type: 'bar',
+            data: {
+                labels: ['Total Income', 'Total Expense', 'Net Profit'],
+                datasets: [{
+                    data: [totalWinAmt, totalLossAmt, totalWinAmt - totalLossAmt],
+                    backgroundColor: [successColor + '80', dangerColor + '80', totalWinAmt - totalLossAmt >= 0 ? accentColor + '80' : dangerColor + '59'],
+                    borderColor: [successColor, dangerColor, totalWinAmt - totalLossAmt >= 0 ? accentColor : dangerColor],
+                    borderWidth: 1.5, borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { ...tooltipCfg, callbacks: { label: ctx => ' ₹'+ctx.raw.toLocaleString('en-IN') } } },
+                scales: { x: { grid: { color: gridColor }, ticks: { color: labelColor, font: { size: 11 } } }, y: { grid: { color: gridColor }, ticks: { color: labelColor, font: { size: 11 }, callback: v => '₹'+(v/1000).toFixed(0)+'k' } } }
+            }
+        });
+
+        // 5. Timeline
+        let runBalance = 0, labels = [], balData = [];
+        chronoTx.forEach(t => {
+            runBalance += t.type === 'INCOME' ? t.amt : -t.amt;
+            labels.push(t.transactionDate);
+            balData.push(runBalance);
+        });
+        if (timelineInst) timelineInst.destroy();
+        timelineInst = new Chart(document.getElementById('timelineChart'), {
+            type: 'line',
+            data: {
+                labels: labels.length ? labels : ['No Data'],
+                datasets: [{
+                    label: 'Balance',
+                    data: balData.length ? balData : [0],
+                    borderColor: accentColor, borderWidth: 1.5,
+                    backgroundColor: accentColor + '12', fill: true,
+                    tension: 0.4, pointRadius: balData.length > 40 ? 0 : 3,
+                    pointBackgroundColor: accentColor, pointHoverRadius: 5
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { ...tooltipCfg, callbacks: { label: ctx => ' ₹'+ctx.raw.toLocaleString('en-IN') } } },
+                scales: {
+                    x: { grid: { color: gridColor }, ticks: { color: labelColor, maxTicksLimit: 10, font: { size: 11 } } },
+                    y: { grid: { color: gridColor }, ticks: { color: labelColor, font: { size: 11 }, callback: v => '₹'+(v/1000).toFixed(0)+'k' } }
+                }
+            }
+        });
+
+        // Progress bars
+        const wrPct = Math.round(winRate);
+        const rrPct = Math.min(100, Math.round((rrRatio / 5) * 100));
+        const pfPct = Math.min(100, Math.round((pf / 5) * 100));
+        const netPct = totalWinAmt > 0 ? Math.min(100, Math.max(0, Math.round(((totalWinAmt - totalLossAmt) / totalWinAmt) * 100))) : 0;
+
+        document.getElementById('progressBars').innerHTML = `
+            <div class="progress-item">
+                <div class="progress-label"><span>Win Rate</span><span style="color:${winRate>=50?'var(--success)':'var(--danger)'};">${wrPct}%</span></div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${wrPct}%;background:${winRate>=50?successColor:dangerColor};opacity:0.7;"></div></div>
+            </div>
+            <div class="progress-item">
+                <div class="progress-label"><span>Risk–Reward (of 5x)</span><span style="color:var(--warn);">${rrRatio.toFixed(2)}x</span></div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${rrPct}%;background:var(--warn);opacity:0.7;"></div></div>
+            </div>
+            <div class="progress-item">
+                <div class="progress-label"><span>Profit Factor (of 5x)</span><span style="color:var(--purple);">${pf.toFixed(2)}x</span></div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${pfPct}%;background:var(--purple);opacity:0.7;"></div></div>
+            </div>
+            <div class="progress-item">
+                <div class="progress-label"><span>Net Margin</span><span style="color:var(--accent);">${netPct}%</span></div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${netPct}%;background:var(--accent);opacity:0.7;"></div></div>
+            </div>
+        `;
+    }
+</script>
+</body>
+</html>

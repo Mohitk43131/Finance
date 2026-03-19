@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eSports Analytics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #000000;
+            --surface: #1c1c1e;
+            --surface2: #2c2c2e;
+            --surface3: #3a3a3c;
+            --border: rgba(255,255,255,0.09);
+            --border-strong: rgba(255,255,255,0.16);
+            --text: #f5f5f7;
+            --muted: #8e8e93;
+            --accent: #0a84ff;
+            --success: #30d158;
+            --danger: #ff453a;
+            --warn: #ff9f0a;
+            --purple: #bf5af2;
+        }
+        [data-theme="light"] {
+            --bg: #f2f2f7;
+            --surface: #ffffff;
+            --surface2: #f2f2f7;
+            --surface3: #e5e5ea;
+            --border: rgba(60,60,67,0.1);
+            --border-strong: rgba(60,60,67,0.2);
+            --text: #000000;
+            --muted: #6c6c70;
+            --accent: #007aff;
+            --success: #34c759;
+            --danger: #ff3b30;
+            --warn: #ff9500;
+            --purple: #af52de;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            transition: background 0.3s, color 0.3s;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ===== LOGIN ===== */
+        #loginOverlay {
+            position: fixed; inset: 0; z-index: 1000;
+            background: rgba(0,0,0,0.65);
+            display: flex; justify-content: center; align-items: center;
+            backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+        }
+        .login-box {
+            background: var(--surface);
+            border: 1px solid var(--border-strong);
+            border-radius: 20px;
+            padding: 40px 36px;
+            width: 356px;
+            text-align: center;
+            box-shadow: 0 32px 80px rgba(0,0,0,0.6);
+        }
+        .login-logo {
+            font-size: 18px; font-weight: 700;
+            color: var(--text); letter-spacing: -0.3px;
+            margin-bottom: 4px;
+        }
+        .login-sub { color: var(--muted); font-size: 12px; margin-bottom: 28px; font-weight: 400; }
+        .login-box input {
+            width: 100%; padding: 11px 14px; margin-bottom: 10px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            color: var(--text);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s, background 0.2s;
+            text-align: left;
+        }
+        .login-box input:focus { border-color: var(--accent); background: var(--surface); }
+        .auth-buttons { display: flex; gap: 8px; margin-bottom: 10px; }
+        .auth-btn {
+            flex: 1; padding: 11px;
+            background: var(--accent);
+            color: white; border: none; border-radius: 10px;
+            cursor: pointer; font-weight: 600;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 14px;
+            transition: opacity 0.15s;
+        }
+        .auth-btn:hover { opacity: 0.88; }
+        .auth-btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+        .auth-btn-secondary:hover { opacity: 1; background: var(--surface3); }
+        .guest-btn {
+            width: 100%; padding: 10px;
+            background: transparent; color: var(--muted);
+            border: 1px solid var(--border);
+            border-radius: 10px; cursor: pointer;
+            font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px;
+            transition: all 0.15s; font-weight: 500;
+        }
+        .guest-btn:hover { color: var(--text); border-color: var(--border-strong); }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            width: 220px; height: 100vh;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex; flex-direction: column;
+            padding: 20px 12px;
+            flex-shrink: 0; z-index: 10;
+        }
+        .sidebar-logo {
+            font-size: 15px; font-weight: 700;
+            color: var(--text); letter-spacing: -0.2px;
+            padding: 0 8px; margin-bottom: 3px;
+        }
+        .sidebar-tagline {
+            font-size: 11px; color: var(--muted);
+            padding: 0 8px; margin-bottom: 26px;
+        }
+        .nav-section {
+            font-size: 10px; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 1px;
+            padding: 0 8px; margin-bottom: 5px; margin-top: 14px;
+            font-weight: 600;
+        }
+        .nav-link {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 10px; color: var(--muted);
+            border-radius: 8px; cursor: pointer;
+            margin-bottom: 2px; font-size: 13px; font-weight: 500;
+            transition: all 0.15s; text-decoration: none;
+        }
+        .nav-icon { font-size: 15px; width: 18px; text-align: center; }
+        .nav-link:hover { background: var(--surface2); color: var(--text); }
+        .nav-link.active { background: rgba(10,132,255,0.14); color: var(--accent); font-weight: 600; }
+        [data-theme="light"] .nav-link.active { background: rgba(0,122,255,0.1); }
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 10px 8px;
+            font-size: 11px; color: var(--muted);
+        }
+        .live-dot {
+            display: inline-block; width: 6px; height: 6px;
+            background: var(--success); border-radius: 50%;
+            margin-right: 5px;
+            animation: pulse 2.5s infinite;
+        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        /* ===== MAIN ===== */
+        .main-content { flex: 1; padding: 28px 32px; height: 100vh; overflow-y: auto; }
+        .main-content::-webkit-scrollbar { width: 4px; }
+        .main-content::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+
+        /* ===== HEADER ===== */
+        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
+        .page-title { font-size: 22px; font-weight: 700; color: var(--text); letter-spacing: -0.5px; }
+        .page-subtitle { color: var(--muted); font-size: 12px; margin-top: 3px; }
+        .header-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        select {
+            padding: 7px 12px; border-radius: 8px;
+            background: var(--surface); color: var(--text);
+            border: 1px solid var(--border);
+            font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px;
+            outline: none; cursor: pointer; font-weight: 500;
+        }
+        .icon-btn {
+            padding: 7px 14px; border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface); color: var(--text);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 13px; font-weight: 500;
+            cursor: pointer; transition: all 0.15s;
+        }
+        .icon-btn:hover { background: var(--surface2); border-color: var(--border-strong); }
+        .danger-btn { color: var(--danger); background: rgba(255,69,58,0.07); border-color: rgba(255,69,58,0.2); }
+        .danger-btn:hover { background: var(--danger); color: white; border-color: var(--danger); }
+        #userInfo { font-size: 13px; color: var(--muted); }
+        .badge { display: inline-block; padding: 2px 7px; border-radius: 5px; font-size: 10px; font-weight: 700; letter-spacing: 0.4px; margin-left: 4px; text-transform: uppercase; }
+        .badge-admin { background: var(--accent); color: white; }
+        .badge-guest { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+
+        /* ===== STAT CARDS ===== */
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(195px, 1fr)); gap: 12px; margin-bottom: 18px; }
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px; position: relative; overflow: hidden;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,0.18); }
+        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; border-radius: 14px 14px 0 0; }
+        .stat-card.income::before { background: var(--success); opacity: 0.5; }
+        .stat-card.expense::before { background: var(--danger); opacity: 0.5; }
+        .stat-card.profit::before { background: var(--accent); opacity: 0.5; }
+        .stat-card.transactions::before { background: var(--warn); opacity: 0.5; }
+        .stat-icon { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-bottom: 12px; }
+        .stat-icon.income { background: rgba(48,209,88,0.12); }
+        .stat-icon.expense { background: rgba(255,69,58,0.12); }
+        .stat-icon.profit { background: rgba(10,132,255,0.12); }
+        .stat-icon.transactions { background: rgba(255,159,10,0.12); }
+        .stat-label { font-size: 10px; color: var(--muted); letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 4px; font-weight: 600; }
+        .stat-value { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
+        .stat-value.income { color: var(--success); }
+        .stat-value.expense { color: var(--danger); }
+        .stat-value.profit-pos { color: var(--accent); }
+        .stat-value.profit-neg { color: var(--danger); }
+        .stat-value.transactions { color: var(--warn); }
+        .stat-change { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+        /* ===== CHARTS ===== */
+        .charts-row { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 18px; }
+        .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+        .chart-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+        .chart-title { font-size: 13px; font-weight: 600; color: var(--text); }
+        .chart-subtitle { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+        /* ===== SPARKLINES ===== */
+        .sparkline-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 18px; }
+        .sparkline-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; overflow: hidden; }
+        .sparkline-label { font-size: 10px; color: var(--muted); letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 3px; font-weight: 600; }
+        .sparkline-val { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 10px; font-variant-numeric: tabular-nums; }
+        .sparkline-canvas { width: 100% !important; height: 48px !important; }
+
+        /* ===== PROGRESS BARS ===== */
+        .progress-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 18px; }
+        .progress-item { margin-bottom: 14px; }
+        .progress-item:last-child { margin-bottom: 0; }
+        .progress-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; color: var(--text); font-weight: 500; }
+        .progress-bar-bg { height: 5px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; border-radius: 3px; transition: width 1.2s cubic-bezier(0.4,0,0.2,1); }
+
+        /* ===== MINI STATS ===== */
+        .stats-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+        .mini-stat { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; display: flex; align-items: center; gap: 14px; }
+        .mini-stat-icon { font-size: 20px; }
+        .mini-stat-label { font-size: 10px; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; font-weight: 600; }
+        .mini-stat-value { font-size: 16px; font-weight: 700; margin-top: 2px; letter-spacing: -0.3px; font-variant-numeric: tabular-nums; }
+
+        /* ===== FORM ===== */
+        .form-container { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px; margin-bottom: 18px; display: none; }
+        .form-container h2 { font-size: 13px; font-weight: 600; color: var(--accent); margin-bottom: 18px; }
+        .form-row { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+        .form-group { flex: 1; min-width: 130px; display: flex; flex-direction: column; }
+        .form-group label { font-size: 10px; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; }
+        .form-group input, .form-group select { padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; outline: none; transition: border-color 0.2s; }
+        .form-group input:focus, .form-group select:focus { border-color: var(--accent); background: var(--surface); }
+        .submit-btn { padding: 10px 18px; background: var(--accent); color: white; border: none; border-radius: 8px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; font-weight: 600; transition: opacity 0.15s; width: 100%; }
+        .submit-btn:hover { opacity: 0.88; }
+
+        /* ===== ADMIN ===== */
+        .admin-list { list-style: none; }
+        .admin-list li { display: flex; justify-content: space-between; align-items: center; padding: 11px 12px; border-bottom: 1px solid var(--border); font-size: 13px; border-radius: 7px; transition: background 0.1s; }
+        .admin-list li:hover { background: var(--surface2); }
+        .remove-admin-btn { background: transparent; color: var(--danger); border: 1px solid rgba(255,69,58,0.2); border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 11px; font-weight: 600; font-family: 'Plus Jakarta Sans', sans-serif; transition: all 0.15s; }
+        .remove-admin-btn:hover { background: var(--danger); color: white; border-color: var(--danger); }
+
+        /* ===== ANIMATIONS ===== */
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .stat-card, .chart-card, .sparkline-card, .mini-stat, .progress-card, .form-container { animation: fadeUp 0.35s ease both; }
+        .stat-card:nth-child(1) { animation-delay: 0.04s; }
+        .stat-card:nth-child(2) { animation-delay: 0.08s; }
+        .stat-card:nth-child(3) { animation-delay: 0.12s; }
+        .stat-card:nth-child(4) { animation-delay: 0.16s; }
+    </style>
+</head>
+<body>
+
+<!-- ===== LOGIN OVERLAY ===== -->
+<div id="loginOverlay">
+    <div class="login-box">
+        <div class="login-logo">⚡ ESPORTS</div>
+        <div class="login-sub">Analytics Command Center</div>
+        <input type="email" id="emailInput" placeholder="Email address">
+        <input type="password" id="passwordInput" placeholder="Password">
+        <div class="auth-buttons">
+            <button id="signInBtn" class="auth-btn">Sign In</button>
+            <button id="signUpBtn" class="auth-btn auth-btn-secondary">Sign Up</button>
+        </div>
+        <button id="guestBtn" class="guest-btn">Continue as Guest Viewer</button>
+    </div>
+</div>
+
+<!-- ===== SIDEBAR ===== -->
+<div class="sidebar">
+    <div>
+        <div class="sidebar-logo">⚡ ESPORTS</div>
+        <div class="sidebar-tagline">Analytics Platform</div>
+
+        <div class="nav-section">Main</div>
+        <a id="navOverview" class="nav-link active">
+            <span class="nav-icon">◈</span> Overview
+        </a>
+        <a href="dashboard.html" class="nav-link">
+            <span class="nav-icon">▦</span> Performance
+        </a>
+        <a href="finance.html" class="nav-link">
+            <span class="nav-icon">◎</span> Finance Ledger
+        </a>
+
+        <div class="nav-section">System</div>
+        <a id="navAdminSettings" class="nav-link" style="display:none; color: var(--danger);">
+            <span class="nav-icon">⚙</span> Admin Settings
+        </a>
+    </div>
+    <div class="sidebar-footer">
+        <span class="live-dot"></span>Live Data Feed<br>
+        <span style="color:var(--success);font-size:10px;">● Firebase Connected</span>
+    </div>
+</div>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="main-content">
+    <div class="header">
+        <div>
+            <div class="page-title" id="pageTitle">Analytics Overview</div>
+            <div class="page-subtitle" id="daysInfo"></div>
+        </div>
+        <div class="header-controls">
+            <span id="userInfo"></span>
+            <select id="timeFilter">
+                <option value="0">Today</option>
+                <option value="7">Last 7 Days</option>
+                <option value="30" selected>Last 30 Days</option>
+                <option value="365">Last Year</option>
+                <option value="9999">All Time</option>
+            </select>
+            <button id="themeToggleBtn" class="icon-btn">☀ Theme</button>
+            <button id="logoutBtn" class="icon-btn danger-btn" style="display:none;">Sign Out</button>
+        </div>
+    </div>
+
+    <!-- ===== OVERVIEW PANEL ===== -->
+    <div id="overviewPanel">
+
+        <!-- STAT CARDS -->
+        <div class="card-grid">
+            <div class="stat-card income">
+                <div class="stat-icon income">💰</div>
+                <div class="stat-label">Total Income</div>
+                <div class="stat-value income" id="totalRevenue">₹0</div>
+                <div class="stat-change">Cumulative earnings</div>
+            </div>
+            <div class="stat-card expense">
+                <div class="stat-icon expense">📉</div>
+                <div class="stat-label">Total Expenses</div>
+                <div class="stat-value expense" id="totalExpense">₹0</div>
+                <div class="stat-change">Cumulative outflow</div>
+            </div>
+            <div class="stat-card profit">
+                <div class="stat-icon profit">⚡</div>
+                <div class="stat-label">Net Profit / Loss</div>
+                <div class="stat-value" id="netProfit">₹0</div>
+                <div class="stat-change">Income minus Expenses</div>
+            </div>
+            <div class="stat-card transactions">
+                <div class="stat-icon transactions">📊</div>
+                <div class="stat-label">Transactions</div>
+                <div class="stat-value transactions" id="txCount">0</div>
+                <div class="stat-change">In selected period</div>
+            </div>
+        </div>
+
+        <!-- SPARKLINES -->
+        <div class="sparkline-row">
+            <div class="sparkline-card">
+                <div class="sparkline-label">Income Trend</div>
+                <div class="sparkline-val" style="color:var(--success)" id="sparkIncome">₹0</div>
+                <canvas id="sparkIncomeChart" class="sparkline-canvas"></canvas>
+            </div>
+            <div class="sparkline-card">
+                <div class="sparkline-label">Expense Trend</div>
+                <div class="sparkline-val" style="color:var(--danger)" id="sparkExpense">₹0</div>
+                <canvas id="sparkExpenseChart" class="sparkline-canvas"></canvas>
+            </div>
+            <div class="sparkline-card">
+                <div class="sparkline-label">Profit Trend</div>
+                <div class="sparkline-val" style="color:var(--accent)" id="sparkProfit">₹0</div>
+                <canvas id="sparkProfitChart" class="sparkline-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- MAIN CHARTS -->
+        <div class="charts-row">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div>
+                        <div class="chart-title">Profit Trend</div>
+                        <div class="chart-subtitle">Running balance over time</div>
+                    </div>
+                    <select id="chartType">
+                        <option value="line">Line</option>
+                        <option value="bar">Bar</option>
+                    </select>
+                </div>
+                <canvas id="profitChart" style="max-height:260px;"></canvas>
+            </div>
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div>
+                        <div class="chart-title">Income vs Expense</div>
+                        <div class="chart-subtitle">Ratio breakdown</div>
+                    </div>
+                </div>
+                <canvas id="expenseChart" style="max-height:260px;"></canvas>
+            </div>
+        </div>
+
+        <!-- PROGRESS BARS -->
+        <div class="progress-card" id="progressSection">
+            <div class="chart-header" style="margin-bottom:18px;">
+                <div>
+                    <div class="chart-title">Financial Health Indicators</div>
+                    <div class="chart-subtitle">Key ratios at a glance</div>
+                </div>
+            </div>
+            <div id="progressBars"></div>
+        </div>
+
+        <!-- MINI STATS -->
+        <div class="stats-row">
+            <div class="mini-stat">
+                <div class="mini-stat-icon">📅</div>
+                <div>
+                    <div class="mini-stat-label">Avg. Daily Income</div>
+                    <div class="mini-stat-value" id="avgDailyIncome" style="color:var(--success)">₹0</div>
+                </div>
+            </div>
+            <div class="mini-stat">
+                <div class="mini-stat-icon">🎯</div>
+                <div>
+                    <div class="mini-stat-label">Largest Transaction</div>
+                    <div class="mini-stat-value" id="largestTx" style="color:var(--warn)">₹0</div>
+                </div>
+            </div>
+            <div class="mini-stat">
+                <div class="mini-stat-icon">📈</div>
+                <div>
+                    <div class="mini-stat-label">Profit Margin</div>
+                    <div class="mini-stat-value" id="profitMargin" style="color:var(--accent)">0%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TRANSACTION FORM (Admin only) -->
+        <div class="form-container" id="adminForm">
+            <h2>Record Transaction</h2>
+            <form id="financeForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Title</label>
+                        <input type="text" id="title" required placeholder="Transaction name">
+                    </div>
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select id="type" required>
+                            <option value="INCOME">Gain (Income)</option>
+                            <option value="EXPENSE">Loss (Expense)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount (₹)</label>
+                        <input type="number" id="amount" step="0.01" required placeholder="0.00">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" id="transactionDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Time</label>
+                        <input type="time" id="transactionTime" required>
+                    </div>
+                    <div class="form-group" style="justify-content:flex-end;">
+                        <label>&nbsp;</label>
+                        <button type="submit" class="submit-btn">+ Add Record</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+    </div><!-- /overviewPanel -->
+
+    <!-- ===== ADMIN SETTINGS PANEL ===== -->
+    <div id="adminSettingsPanel" style="display:none;">
+        <div class="chart-card" style="margin-bottom:14px;">
+            <h2 style="font-size:13px; font-weight:600; color:var(--accent); margin-bottom:10px;">Add New Admin</h2>
+            <p style="color:var(--muted); font-size:13px; margin-bottom:18px;">Grant another account full access to add and delete financial records.</p>
+            <div class="form-row" style="align-items:flex-end;">
+                <div class="form-group" style="flex:2;">
+                    <label>Admin Email Address</label>
+                    <input type="email" id="newAdminEmail" placeholder="user@gmail.com"
+                        style="padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;outline:none;transition:border-color 0.2s;">
+                </div>
+                <div class="form-group" style="flex:1; justify-content:flex-end;">
+                    <label>&nbsp;</label>
+                    <button id="addAdminBtn" class="submit-btn">Grant Access</button>
+                </div>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title" style="margin-bottom:14px;">Authorized Admins</div>
+            <ul id="adminListUI" class="admin-list"></ul>
+        </div>
+    </div>
+
+</div><!-- /main-content -->
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+    import { getDatabase, ref, push, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyA45woJ-QeDGpk7KkS_jkSaXuBTnqkzcQ8",
+        authDomain: "next-streaming-645b2.firebaseapp.com",
+        databaseURL: "https://next-streaming-645b2-default-rtdb.firebaseio.com",
+        projectId: "next-streaming-645b2",
+        storageBucket: "next-streaming-645b2.firebasestorage.app",
+        messagingSenderId: "353530200083",
+        appId: "1:353530200083:web:f82a1534b65ac4bbe5ffe6"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    const BASE_ADMINS = ["suryax06@gmail.com", "mohitk43131@gmail.com"];
+    let dynamicAdmins = [];
+    let allTransactions = [];
+    let profitChartInst, expenseChartInst;
+    let sparkProfitInst, sparkExpInst, sparkIncInst;
+    const formatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+
+    function isUserAdmin(email) {
+        if (!email) return false;
+        return BASE_ADMINS.includes(email) || dynamicAdmins.some(a => a.email === email);
+    }
+
+    // ADMINS LISTENER
+    onValue(ref(db, 'admins'), (snapshot) => {
+        const data = snapshot.val();
+        dynamicAdmins = data ? Object.keys(data).map(k => ({ id: k, email: data[k] })) : [];
+        let html = '';
+        BASE_ADMINS.forEach(email => {
+            html += `<li><span>${email} <span style="color:var(--muted);font-size:11px;">(Super Admin)</span></span></li>`;
+        });
+        dynamicAdmins.forEach(admin => {
+            if (!BASE_ADMINS.includes(admin.email)) {
+                html += `<li><span>${admin.email}</span><button class="remove-admin-btn" data-id="${admin.id}">Remove</button></li>`;
+            }
+        });
+        document.getElementById('adminListUI').innerHTML = html;
+        if (auth.currentUser) updateUserUI(auth.currentUser);
+    });
+
+    // AUTH
+    document.getElementById('signUpBtn').addEventListener('click', () => {
+        const e = document.getElementById('emailInput').value.trim();
+        const p = document.getElementById('passwordInput').value.trim();
+        if (!e || !p) return alert("Please enter both email and password.");
+        createUserWithEmailAndPassword(auth, e, p).catch(err => alert("Sign Up Error: " + err.message));
+    });
+
+    document.getElementById('signInBtn').addEventListener('click', () => {
+        const e = document.getElementById('emailInput').value.trim();
+        const p = document.getElementById('passwordInput').value.trim();
+        if (!e || !p) return alert("Please enter both email and password.");
+        signInWithEmailAndPassword(auth, e, p).catch(err => {
+            if (['auth/invalid-credential','auth/user-not-found','auth/wrong-password'].includes(err.code))
+                alert("Incorrect Email or Password!");
+            else alert("Login Error: " + err.message);
+        });
+    });
+
+    document.getElementById('guestBtn').addEventListener('click', () => {
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('logoutBtn').style.display = 'inline-block';
+        document.getElementById('adminForm').style.display = 'none';
+        document.getElementById('navAdminSettings').style.display = 'none';
+        document.getElementById('userInfo').innerHTML = `Guest <span class="badge badge-guest">VISITOR</span>`;
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        document.getElementById('loginOverlay').style.display = 'flex';
+        document.getElementById('adminForm').style.display = 'none';
+        document.getElementById('navAdminSettings').style.display = 'none';
+        document.getElementById('logoutBtn').style.display = 'none';
+        document.getElementById('userInfo').innerHTML = '';
+        document.getElementById('emailInput').value = '';
+        document.getElementById('passwordInput').value = '';
+        document.getElementById('navOverview').click();
+        signOut(auth).catch(e => console.log(e));
+    });
+
+    function updateUserUI(user) {
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('logoutBtn').style.display = 'inline-block';
+        const isAdmin = isUserAdmin(user.email);
+        const name = user.email.split('@')[0];
+        if (isAdmin) {
+            document.getElementById('adminForm').style.display = 'block';
+            document.getElementById('navAdminSettings').style.display = 'block';
+            document.getElementById('userInfo').innerHTML = `${name} <span class="badge badge-admin">ADMIN</span>`;
+        } else {
+            document.getElementById('adminForm').style.display = 'none';
+            document.getElementById('navAdminSettings').style.display = 'none';
+            document.getElementById('userInfo').innerHTML = `${name} <span class="badge badge-guest">VISITOR</span>`;
+        }
+    }
+
+    onAuthStateChanged(auth, user => { if (user) updateUserUI(user); });
+
+    // NAVIGATION
+    document.getElementById('navOverview').addEventListener('click', () => {
+        document.getElementById('navOverview').classList.add('active');
+        document.getElementById('navAdminSettings').classList.remove('active');
+        document.getElementById('overviewPanel').style.display = 'block';
+        document.getElementById('adminSettingsPanel').style.display = 'none';
+        document.getElementById('pageTitle').innerText = 'Analytics Overview';
+        document.getElementById('timeFilter').style.display = 'block';
+    });
+
+    document.getElementById('navAdminSettings').addEventListener('click', () => {
+        document.getElementById('navOverview').classList.remove('active');
+        document.getElementById('navAdminSettings').classList.add('active');
+        document.getElementById('overviewPanel').style.display = 'none';
+        document.getElementById('adminSettingsPanel').style.display = 'block';
+        document.getElementById('pageTitle').innerText = 'Admin Management';
+        document.getElementById('timeFilter').style.display = 'none';
+    });
+
+    // THEME
+    document.getElementById('themeToggleBtn').addEventListener('click', () => {
+        const html = document.documentElement;
+        html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+        setTimeout(updateDashboardUI, 60);
+    });
+
+    // ADMIN MANAGEMENT
+    document.getElementById('addAdminBtn').addEventListener('click', () => {
+        const email = document.getElementById('newAdminEmail').value.trim();
+        if (!email) return alert("Enter an email address.");
+        if (!email.includes('@')) return alert("Enter a valid email.");
+        if (isUserAdmin(email)) return alert("Already an admin!");
+        push(ref(db, 'admins'), email).then(() => { document.getElementById('newAdminEmail').value = ''; }).catch(e => alert(e.message));
+    });
+
+    document.getElementById('adminListUI').addEventListener('click', e => {
+        if (e.target.classList.contains('remove-admin-btn')) {
+            const id = e.target.getAttribute('data-id');
+            if (confirm("Revoke admin access?")) remove(ref(db, 'admins/' + id)).catch(e => alert(e.message));
+        }
+    });
+
+    // DATE DEFAULTS
+    function setDateTimeDefaults() {
+        document.getElementById('transactionDate').valueAsDate = new Date();
+        document.getElementById('transactionTime').value = new Date().toTimeString().slice(0, 5);
+    }
+    setDateTimeDefaults();
+
+    // FIREBASE DATA
+    onValue(ref(db, 'finances'), snapshot => {
+        const data = snapshot.val();
+        allTransactions = [];
+        if (data) {
+            allTransactions = Object.keys(data).map(k => ({ id: k, ...data[k] }));
+            allTransactions.sort((a, b) => new Date(a.transactionDate) - new Date(b.transactionDate));
+        }
+        updateDashboardUI();
+    });
+
+    // SPARKLINE HELPER
+    function makeSparkline(canvasId, data, color, existingInst) {
+        if (existingInst) existingInst.destroy();
+        return new Chart(document.getElementById(canvasId), {
+            type: 'line',
+            data: {
+                labels: data.map((_, i) => i),
+                datasets: [{ data: data.length ? data : [0], borderColor: color, backgroundColor: color + '18', fill: true, borderWidth: 1.5, pointRadius: 0, tension: 0.4 }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                scales: { x: { display: false }, y: { display: false } },
+                animation: { duration: 600 }
+            }
+        });
+    }
+
+    function updateDashboardUI() {
+        const days = parseInt(document.getElementById('timeFilter').value);
+        const chartType = document.getElementById('chartType').value;
+        const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+        const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+        const labelColor = isDark ? '#8e8e93' : '#6c6c70';
+        const accentColor = isDark ? '#0a84ff' : '#007aff';
+        const successColor = isDark ? '#30d158' : '#34c759';
+        const dangerColor = isDark ? '#ff453a' : '#ff3b30';
+        const tooltipBg = isDark ? 'rgba(28,28,30,0.97)' : 'rgba(255,255,255,0.97)';
+        const tooltipBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+        const tooltipTitle = accentColor;
+        const tooltipBody = isDark ? '#f5f5f7' : '#1d1d1f';
+
+        const todayEnd = new Date(); todayEnd.setHours(23,59,59,999);
+        const pastDate = new Date(); pastDate.setHours(0,0,0,0);
+
+        const infoEl = document.getElementById('daysInfo');
+        if (days === 0) infoEl.innerText = "Showing data for today";
+        else if (days === 9999) infoEl.innerText = "Showing all-time data";
+        else {
+            pastDate.setDate(todayEnd.getDate() - days);
+            infoEl.innerText = `${pastDate.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})} → ${new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`;
+        }
+
+        const filtered = allTransactions.filter(t => {
+            if (days === 9999) return true;
+            const [y,m,d] = t.transactionDate.split('-');
+            const tDate = new Date(y, m-1, d);
+            return tDate >= pastDate && tDate <= todayEnd;
+        });
+
+        let running = 0, incTotal = 0, expTotal = 0;
+        let dates = [], profitData = [], incData = [], expData = [];
+
+        filtered.forEach(t => {
+            const amt = parseFloat(t.amount);
+            if (t.type === 'INCOME') { running += amt; incTotal += amt; incData.push(incTotal); expData.push(expTotal); }
+            else { running -= amt; expTotal += amt; expData.push(expTotal); incData.push(incTotal); }
+            dates.push(t.transactionDate);
+            profitData.push(running);
+        });
+
+        const netProfit = incTotal - expTotal;
+        const largest = filtered.length ? Math.max(...filtered.map(t => parseFloat(t.amount))) : 0;
+        const margin = incTotal > 0 ? Math.round((netProfit / incTotal) * 100) : 0;
+        const dayCount = days === 0 ? 1 : days === 9999 ? 365 : days;
+        const avgDaily = incTotal / dayCount;
+
+        document.getElementById('totalRevenue').innerText = formatter.format(incTotal);
+        document.getElementById('totalExpense').innerText = formatter.format(expTotal);
+        document.getElementById('txCount').innerText = filtered.length;
+        document.getElementById('avgDailyIncome').innerText = formatter.format(avgDaily);
+        document.getElementById('largestTx').innerText = formatter.format(largest);
+        document.getElementById('profitMargin').innerText = margin + '%';
+
+        const profitEl = document.getElementById('netProfit');
+        profitEl.innerText = formatter.format(netProfit);
+        profitEl.className = 'stat-value ' + (netProfit >= 0 ? 'profit-pos' : 'profit-neg');
+
+        // Sparklines
+        document.getElementById('sparkIncome').innerText = formatter.format(incTotal);
+        document.getElementById('sparkExpense').innerText = formatter.format(expTotal);
+        document.getElementById('sparkProfit').innerText = formatter.format(netProfit);
+        sparkIncInst = makeSparkline('sparkIncomeChart', incData, successColor, sparkIncInst);
+        sparkExpInst = makeSparkline('sparkExpenseChart', expData, dangerColor, sparkExpInst);
+        sparkProfitInst = makeSparkline('sparkProfitChart', profitData, accentColor, sparkProfitInst);
+
+        // Main profit chart
+        if (profitChartInst) profitChartInst.destroy();
+        profitChartInst = new Chart(document.getElementById('profitChart'), {
+            type: chartType,
+            data: {
+                labels: dates.length ? dates : ['No Data'],
+                datasets: [{
+                    label: 'Net Profit (₹)',
+                    data: profitData.length ? profitData : [0],
+                    backgroundColor: chartType === 'bar' ? accentColor + '33' : accentColor + '14',
+                    borderColor: accentColor,
+                    borderWidth: 1.5,
+                    tension: 0.4,
+                    fill: chartType === 'line',
+                    pointBackgroundColor: accentColor,
+                    pointRadius: profitData.length > 30 ? 0 : 3,
+                    pointHoverRadius: 5,
+                    borderRadius: chartType === 'bar' ? 4 : 0
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: tooltipBg,
+                        borderColor: tooltipBorder,
+                        borderWidth: 1,
+                        titleColor: tooltipTitle,
+                        bodyColor: tooltipBody,
+                        padding: 10,
+                        callbacks: { label: ctx => ' ₹' + ctx.raw.toLocaleString('en-IN') }
+                    }
+                },
+                scales: {
+                    x: { grid: { color: gridColor }, ticks: { color: labelColor, maxTicksLimit: 8, font: { size: 11 } } },
+                    y: { grid: { color: gridColor }, ticks: { color: labelColor, font: { size: 11 }, callback: v => '₹' + (v/1000).toFixed(0) + 'k' } }
+                }
+            }
+        });
+
+        // Doughnut chart
+        if (expenseChartInst) expenseChartInst.destroy();
+        expenseChartInst = new Chart(document.getElementById('expenseChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Total Income', 'Total Expense'],
+                datasets: [{
+                    data: [incTotal || 1, expTotal || 0],
+                    backgroundColor: [successColor + 'b3', dangerColor + 'b3'],
+                    borderColor: [successColor, dangerColor],
+                    borderWidth: 1.5,
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                cutout: '74%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: labelColor, padding: 14, usePointStyle: true, font: { size: 11 } }
+                    },
+                    tooltip: {
+                        backgroundColor: tooltipBg,
+                        borderColor: tooltipBorder,
+                        borderWidth: 1,
+                        bodyColor: tooltipBody,
+                        padding: 10,
+                        callbacks: { label: ctx => ' ₹' + ctx.raw.toLocaleString('en-IN') }
+                    }
+                }
+            }
+        });
+
+        // Progress bars
+        const total = incTotal + expTotal;
+        const incPct = total > 0 ? Math.round((incTotal / total) * 100) : 0;
+        const expPct = total > 0 ? Math.round((expTotal / total) * 100) : 0;
+        const healthPct = incTotal > 0 ? Math.min(100, Math.max(0, margin)) : 0;
+        document.getElementById('progressBars').innerHTML = `
+            <div class="progress-item">
+                <div class="progress-label"><span>Income Share</span><span style="color:var(--success)">${incPct}%</span></div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${incPct}%; background:var(--success);opacity:0.7;"></div></div>
+            </div>
+            <div class="progress-item">
+                <div class="progress-label"><span>Expense Share</span><span style="color:var(--danger)">${expPct}%</span></div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${expPct}%; background:var(--danger);opacity:0.7;"></div></div>
+            </div>
+            <div class="progress-item">
+                <div class="progress-label"><span>Profit Margin</span><span style="color:var(--accent)">${Math.max(0,margin)}%</span></div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${healthPct}%; background:var(--accent);opacity:0.8;"></div></div>
+            </div>
+        `;
+    }
+
+    document.getElementById('timeFilter').addEventListener('change', updateDashboardUI);
+    document.getElementById('chartType').addEventListener('change', updateDashboardUI);
+
+    document.getElementById('financeForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const txRef = push(ref(db, 'finances'));
+        set(txRef, {
+            title: document.getElementById('title').value,
+            type: document.getElementById('type').value,
+            amount: parseFloat(document.getElementById('amount').value),
+            transactionDate: document.getElementById('transactionDate').value,
+            transactionTime: document.getElementById('transactionTime').value
+        }).then(() => {
+            document.getElementById('financeForm').reset();
+            setDateTimeDefaults();
+        }).catch(err => alert("Error saving: " + err.message));
+    });
+</script>
+</body>
+</html>
